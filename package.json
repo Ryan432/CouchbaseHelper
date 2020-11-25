@@ -1,6 +1,6 @@
 {
 	"name": "couchbasehelper",
-	"version": "1.0.8",
+	"version": "1.0.9",
 	"description": "Node js helper for couchbase queries with locks support.",
 	"main": "./src/CouchbaseHelper.js",
 	"scripts": {
