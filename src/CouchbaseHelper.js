@@ -239,7 +239,7 @@ class CouchbaseHelper {
 	};
 
 	// Buckets management.
-	createBucket = async ({ bucketName, bucketOptions, createPrimaryIndex = true, columns = [] }) => {
+	createBucket = async ({ bucketName, bucketOptions, createPrimaryIndex = true, columns = [], ignoreIfExists = true }) => {
 		const options = {
 			flushEnabled: false,
 			ramQuotaMB: 256,
@@ -249,8 +249,21 @@ class CouchbaseHelper {
 			ejectionMethod: couchbase.EvictionPolicy.ValueOnly,
 			...bucketOptions
 		};
+		let createBucketRes;
+		try {
+			createBucketRes = await this.#bucketManager.createBucket({ name: bucketName, ...options });
+		} catch (error) {
+			const errorMessage = error.constructor.name;
+			if (ignoreIfExists && errorMessage !== 'BucketExistsError') {
+				throw new GeneralError({ extraDetails: error });
+			} else if (!ignoreIfExists) {
+				throw new GeneralError({ extraDetails: error });
+			}
 
-		const createBucketRes = await this.#bucketManager.createBucket({ name: bucketName, ...options });
+			if (ignoreIfExists && errorMessage === 'BucketExistsError') {
+				createBucketRes = 'Bucket already exist.';
+			}
+		}
 
 		if (createPrimaryIndex) {
 			// console.log('here');
