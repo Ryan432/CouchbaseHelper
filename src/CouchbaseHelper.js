@@ -26,14 +26,14 @@ class CouchbaseHelper {
 		this.#isLockingEnabled = true;
 	}
 
-	static connectCluster = (host, { username, password }, locksOptions = { locksDefaultTTL: 5 }) => {
+	static connectCluster = (host, { username, password }, createLocksBucket = false, locksOptions = { locksDefaultTTL: 5 }) => {
 		return new Aigle(async (resolve, reject) => {
 			try {
 				const cluster = await couchbase.Cluster.connect(host, { username, password });
 				if (!cluster._clusterConn) {
 					reject(new ConnectionError({ extraDetails: cluster }));
 				} else {
-					const locksBucketCollection = await this.#initLocks(cluster);
+					const locksBucketCollection = await this.#initLocks(cluster, createLocksBucket);
 					resolve(new CouchbaseHelper(cluster, locksOptions, locksBucketCollection));
 				}
 			} catch (error) {
@@ -54,16 +54,20 @@ class CouchbaseHelper {
 		};
 
 		return new Aigle(async (resolve, reject) => {
-			const bucketsManager = cluster.buckets();
-			try {
-				const createLockBucket = await bucketsManager.createBucket(createLocksBucketObj, { timeout: 5000 });
-				resolve(cluster.bucket('locks').defaultCollection());
-			} catch (error) {
-				if (error.constructor.name === 'BucketExistsError') {
+			if (createLocksBucket) {
+				try {
+					const bucketsManager = cluster.buckets();
+					const createLockBucket = await bucketsManager.createBucket(createLocksBucketObj, { timeout: 5000 });
 					resolve(cluster.bucket('locks').defaultCollection());
-				} else {
-					reject(error);
+				} catch (error) {
+					if (error.constructor.name === 'BucketExistsError') {
+						resolve(cluster.bucket('locks').defaultCollection());
+					} else {
+						reject(error);
+					}
 				}
+			} else {
+				resolve(cluster.bucket('locks').defaultCollection());
 			}
 		});
 	};
