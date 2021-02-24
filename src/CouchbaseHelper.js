@@ -42,7 +42,7 @@ class CouchbaseHelper {
 		});
 	};
 
-	static #initLocks = (cluster) => {
+	static #initLocks = (cluster, createLocksBucket) => {
 		const createLocksBucketObj = {
 			name: 'locks',
 			flushEnabled: false,
